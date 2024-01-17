@@ -13,18 +13,15 @@ import (
 
 var connString = "host=localhost port=5432 user=postgres password=admin dbname=travelohi sslmode=disable"
 
-func register(c *gin.Context) {
-	
+func handleRegister(c *gin.Context) {
 
 	var data models.Payload
-	
-    if err := c.ShouldBindJSON(&data); err != nil {
-        fmt.Printf("Error binding JSON: %s\n", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid JSON"})
-        return
-    }
 
-	
+	if err := c.ShouldBindJSON(&data); err != nil {
+		fmt.Printf("Error binding JSON: %s\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid JSON"})
+		return
+	}
 
 	database, _ := db.Connect(connString)
 	err := models.RegisterUser(database, &data.User, &data.UserAuth)
@@ -34,7 +31,7 @@ func register(c *gin.Context) {
 			"error": err.Error(),
 		})
 	}
-	
+
 }
 
 func testing(c *gin.Context) {
@@ -44,26 +41,53 @@ func testing(c *gin.Context) {
 	})
 }
 
+func handleLogin(c *gin.Context) {
+	var userAuth models.UserAuth
+
+	if err := c.ShouldBindJSON(&userAuth); err != nil {
+		fmt.Println("Error binding json la\n")
+	}
+
+	fmt.Println("useryaaaaa ", userAuth)
+
+	database, _ := db.Connect(connString)
+	user, err := models.GetUser(database, &userAuth)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	userResponse := models.UserResponse{
+		Model:             user.Model,
+		FirstName:         user.FirstName,
+		MiddleName:        user.MiddleName,
+		LastName:          user.LastName,
+		DateOfBirth:       user.DateOfBirth,
+		Gender:            user.Gender,
+		IsBanned:          user.IsBanned,
+		ProfilePictureURL: user.ProfilePictureURL,
+	}
+
+	c.IndentedJSON(http.StatusOK, userResponse)
+}
+
 func main() {
 	router := gin.Default()
 
 	router.Use(cors.Default())
-	
-	router.GET("/testing", testing)
-	router.POST("/register", register)
 
+	router.GET("/ping", testing)
+	router.POST("/register", handleRegister)
+	router.POST("/login", handleLogin)
 
-	
 	database, err := db.Connect(connString)
-	
+
 	if err != nil {
 		fmt.Println("Error while connecting to db")
 	}
-	
+
 	db.Migrate(database)
-
-
-
 
 	router.Run("0.0.0.0:8080")
 }

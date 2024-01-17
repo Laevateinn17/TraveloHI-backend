@@ -1,7 +1,9 @@
 package models
 
+import "gorm.io/gorm"
+
 type Passenger struct {
-	ID          string `json:"id"`
+	gorm.Model
 	TicketID    string `json:"ticketID" gorm:"foreignKey:ID"`
 	FirstName   string `json:"firstName"`
 	MiddleName  string `json:"middleName"`
