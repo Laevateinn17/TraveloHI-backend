@@ -5,22 +5,21 @@ import (
 
 	"github.com/Laevateinn17/travelohi-backend/controllers"
 	"github.com/Laevateinn17/travelohi-backend/db"
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq"
 )
 
-
-
 func main() {
-	router := gin.Default()
+	router := fiber.New()
 
-	router.Use(cors.Default())
+	router.Use(cors.New(cors.Config{
+		AllowCredentials: true,
+	}))
 
-	router.GET("/ping", controllers.Ping)
-	router.POST("/register", controllers.HandleRegister)
-	router.POST("/login", controllers.HandleLogin)
-
+	router.Get("/ping", controllers.Ping)
+	router.Post("/register", controllers.HandleRegister)
+	router.Post("/login", controllers.HandleLogin)
 
 	database, err := db.Connect()
 	if err != nil {
@@ -28,8 +27,7 @@ func main() {
 		return
 	}
 
-
 	db.Migrate(database)
 
-	router.Run("0.0.0.0:8080")
+	router.Listen("0.0.0.0:8080")
 }

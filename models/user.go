@@ -20,7 +20,7 @@ type User struct {
 	IsBanned          bool      `json:"isBanned"`
 	ProfilePictureURL string    `json:"profilePictureURL"`
 
-	UserAuth UserAuth `json:"userAuth" gorm:"foreignKey:UserID"`
+	UserAuth UserAuth `json:"-" gorm:"foreignKey:UserID"`
 }
 
 type UserAuth struct {
@@ -30,17 +30,6 @@ type UserAuth struct {
 	Password         string `json:"password"`
 	SecurityQuestion string `json:"securityQuestion"`
 	SecurityAnswer   string `json:"securityAnswer"`
-}
-
-type UserResponse struct {
-	gorm.Model
-	FirstName         string    `json:"firstName"`
-	MiddleName        string    `json:"middleName"`
-	LastName          string    `json:"lastName"`
-	DateOfBirth       time.Time `json:"dateOfBirth"`
-	Gender            string    `json:"gender"`
-	IsBanned          bool      `json:"isBanned"`
-	ProfilePictureURL string    `json:"profilePictureURL"`
 }
 
 type Payload struct {
@@ -82,19 +71,22 @@ func ValidateData(user *User, userAuth *UserAuth) bool {
 	return true
 }
 
-func GetUser(db *gorm.DB, userAuth *UserAuth) (User, error) {
+func GetUser(db *gorm.DB, userAuth *UserAuth) (*User, error) {
 
 	var result UserAuth
 	db.Model(&UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
 
-	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(userAuth.Password)); err == nil {
-		var user User
-		db.Model(&User{}).Where("id = ?", result.UserID).First(&user)
-		return user, nil
+	if result.ID == 0 {
+		return nil, fmt.Errorf("authentication failed")
 	}
 
-	fmt.Println("nuh uh!!!")
-	return User{}, fmt.Errorf("invalid credential")
+	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(userAuth.Password)); err != nil {
+		return nil, fmt.Errorf("invalid credential")
+	}
+
+	var user User
+	db.Model(&User{}).Where("id = ?", result.UserID).First(&user)
+	return &user, nil
 
 }
 
