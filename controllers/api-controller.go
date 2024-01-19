@@ -41,18 +41,16 @@ func Ping(c *fiber.Ctx) error {
 
 func HandleLogin(c *fiber.Ctx) error {
 	var userAuth models.UserAuth
-
 	if err := c.BodyParser(&userAuth); err != nil {
 		fmt.Println("Error binding json")
 	}
 
-	fmt.Println("useryaaaaa ", userAuth)
-
+	
 	database, _ := db.Connect()
 	user, err := models.GetUser(database, &userAuth)
-
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, err.Error())
+		c.Status(http.StatusBadRequest)
+		return c.JSON(err.Error())
 	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
@@ -74,7 +72,6 @@ func HandleLogin(c *fiber.Ctx) error {
 		Expires:  time.Now().Add(24 * time.Hour),
 		HTTPOnly: true,
 	}
-	fmt.Println(time.Now().String())
 	c.Cookie(&cookie)
 
 	return c.JSON(fiber.Map{
