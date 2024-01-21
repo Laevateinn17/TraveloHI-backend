@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Laevateinn17/travelohi-backend/utilities"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -69,45 +68,4 @@ func ValidateData(user *User, userAuth *UserAuth) bool {
 	}
 
 	return true
-}
-
-func GetUser(db *gorm.DB, userAuth *UserAuth) (*User, error) {
-
-	var result UserAuth
-	db.Model(&UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
-
-	if result.ID == 0 {
-		return nil, fmt.Errorf("authentication failed")
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(userAuth.Password)); err != nil {
-		return nil, fmt.Errorf("invalid credential")
-	}
-
-	var user User
-	db.Model(&User{}).Where("id = ?", result.UserID).First(&user)
-	return &user, nil
-
-}
-
-func RegisterUser(db *gorm.DB, user *User, userAuth *UserAuth) error {
-
-	if !ValidateData(user, userAuth) || DoesEmailExist(db, userAuth.Email) {
-		return fmt.Errorf("one or more validation is violated")
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(userAuth.Password), bcrypt.DefaultCost)
-
-	if err != nil {
-		return fmt.Errorf("an unexpected error occurred")
-	}
-
-	userAuth.Password = string(hash)
-
-	user.UserAuth = *userAuth
-	result := db.Create(&user)
-	if result.Error != nil {
-		return fmt.Errorf("an unexpected error occurred")
-	}
-	return nil
 }

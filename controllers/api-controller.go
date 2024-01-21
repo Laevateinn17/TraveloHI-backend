@@ -25,7 +25,7 @@ func HandleRegister(c *fiber.Ctx) error {
 	}
 
 	database, _ := db.Connect()
-	err := models.RegisterUser(database, &data.User, &data.UserAuth)
+	err := RegisterUser(database, &data.User, &data.UserAuth)
 
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
@@ -45,17 +45,18 @@ func HandleLogin(c *fiber.Ctx) error {
 		fmt.Println("Error binding json")
 	}
 
-	
 	database, _ := db.Connect()
-	user, err := models.GetUser(database, &userAuth)
+	user, err := GetUserAuth(database, &userAuth)
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return c.JSON(err.Error())
 	}
 
+	expiryTime := time.Now().Add(time.Hour * 24)
+
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    strconv.Itoa(int(user.ID)),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+		ExpiresAt: jwt.NewNumericDate(expiryTime),
 	})
 
 	token, err := claims.SignedString([]byte(secretKey))
@@ -69,12 +70,74 @@ func HandleLogin(c *fiber.Ctx) error {
 	cookie := fiber.Cookie{
 		Name:     "jwt",
 		Value:    token,
-		Expires:  time.Now().Add(24 * time.Hour),
+		Expires:  expiryTime,
 		HTTPOnly: true,
 	}
+
 	c.Cookie(&cookie)
+
+	cookie2 := fiber.Cookie{
+		Name:    "session",
+		Value:   "active",
+		Expires: expiryTime,
+	}
+
+	c.Cookie(&cookie2)
 
 	return c.JSON(fiber.Map{
 		"messsage": "success",
+	})
+}
+
+func GetUserData(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt")
+
+	token, err := jwt.ParseWithClaims(cookie, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
+	})
+
+	if err != nil {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+
+	claims := token.Claims
+
+	id, err := claims.GetIssuer()
+
+	if err != nil {
+		c.Status(fiber.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "unauthorized",
+		})
+	}
+
+	database, _ := db.Connect()
+	var userAuth models.UserAuth
+	err = database.Model(&models.UserAuth{}).Where("id = ?", id).First(&userAuth).Error
+
+	if err == nil {
+		var user models.User
+		database.Model(&user).Where("id = ?", userAuth.UserID).First(&user)
+		return c.JSON(user)
+	}
+	// fmt.Println(err.Error())
+	return nil
+}
+
+func HandleLogout(c *fiber.Ctx) error {
+	c.Cookie(&fiber.Cookie{
+		Name:     "jwt",
+		Value:    "deleted",
+		Expires:  time.Now().Add(-(time.Hour * 2)), // Add negative time means it happens in the past :P
+		HTTPOnly: true,
+	})
+
+	c.ClearCookie("session")
+	fmt.Println("clearing cookies")
+	return c.JSON(fiber.Map{
+		"message": "success",
 	})
 }

@@ -14,7 +14,7 @@ func main() {
 	router := fiber.New()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
+		AllowOrigins:     "http://localhost:5173",
 		AllowCredentials: true,
 	}))
 
@@ -22,6 +22,8 @@ func main() {
 	router.Post("/register", controllers.HandleRegister)
 	router.Post("/login", controllers.HandleLogin)
 
+	router.Get("/user", controllers.GetUserData)
+	router.Post("/logout", controllers.HandleLogout)
 	database, err := db.Connect()
 	if err != nil {
 		fmt.Println("Error while connecting to db")
