@@ -89,6 +89,7 @@ func HandleLogin(c *fiber.Ctx) error {
 	})
 }
 
+
 func GetUserData(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 
@@ -140,4 +141,62 @@ func HandleLogout(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "success",
 	})
+}
+
+func CreateOTPRequest(c *fiber.Ctx) error {
+	var userAuth models.UserAuth
+
+	if err := c.BodyParser(&userAuth); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	database, err := db.Connect()
+	
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed connecting to database")
+	}
+	
+	if (len(userAuth.Email) <= 0 || !models.DoesEmailExist(database, userAuth.Email)) {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf("supplied email is invalid")
+	}
+
+	otp, err := CreateOTP(database, &userAuth)
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed sending otp code")
+	}
+
+	c.Status(http.StatusOK)
+
+	return c.JSON(otp)
+}
+
+func ValidateOTPRequest(c* fiber.Ctx) error {
+	var otp models.OTP
+
+	if err := c.BodyParser(&otp); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	database, err := db.Connect()
+	
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed connecting to database")
+	}
+
+	err = ValidateOTP(database, &otp)
+
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(err.Error())
+	}
+
+	c.Status(http.StatusOK)
+	return nil
 }

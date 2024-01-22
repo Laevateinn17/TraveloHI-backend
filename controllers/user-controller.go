@@ -64,3 +64,4 @@ func RegisterUser(db *gorm.DB, user *models.User, userAuth *models.UserAuth) err
 	}
 	return nil
 }
+
