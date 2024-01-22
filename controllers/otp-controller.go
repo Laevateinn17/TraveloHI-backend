@@ -9,15 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
-
-
 func CreateOTP(db *gorm.DB, userAuth *models.UserAuth) (*models.OTP, error) {
 	var result models.OTP
 
 	db.Model(&models.OTP{}).Where("email = ?", userAuth.Email).First(&result)
 
 	if result.ID != 0 {
-		DeleteOTP(db, userAuth)
+		DeleteOTP(db, &result)
 	}
 
 	var otp models.OTP
@@ -42,19 +40,18 @@ func CreateOTP(db *gorm.DB, userAuth *models.UserAuth) (*models.OTP, error) {
 func ValidateOTP(db *gorm.DB, otp *models.OTP) error {
 	var result models.OTP
 	db.Model(&models.OTP{}).Where("code = ?", otp.Code).First(&result)
-
-	if otp.ID == 0 || otp.Email != result.Email{
+	fmt.Println(result)
+	if (result.ID == 0) || (otp.Email != result.Email) {
 		return fmt.Errorf("invalid otp code")
 	}
 
-	if otp.ExpiresAt.Unix() < time.Now().Unix() {
+	if result.ExpiresAt.Unix() < time.Now().Unix() {
 		return fmt.Errorf("otp code has expired")
 	}
 
 	return nil
 }
 
-func DeleteOTP(db *gorm.DB, userAuth *models.UserAuth) {
-	db.Delete(&userAuth)
+func DeleteOTP(db *gorm.DB, otp *models.OTP) {
+	db.Delete(&otp)
 }
-

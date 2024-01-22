@@ -25,13 +25,11 @@ func main() {
 	router.Get("/user", controllers.GetUserData)
 	router.Post("/logout", controllers.HandleLogout)
 
-
 	router.Post("/otp", controllers.CreateOTPRequest)
-	router.Get("/otp", controllers.ValidateOTPRequest)
+	router.Post("/check-otp", controllers.ValidateOTPRequest)
 
-	
 	database, err := db.Connect()
-	
+
 	if err != nil {
 		fmt.Println("Error while connecting to db")
 		return

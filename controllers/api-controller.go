@@ -89,7 +89,6 @@ func HandleLogin(c *fiber.Ctx) error {
 	})
 }
 
-
 func GetUserData(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 
@@ -152,13 +151,13 @@ func CreateOTPRequest(c *fiber.Ctx) error {
 	}
 
 	database, err := db.Connect()
-	
+
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
 		return fmt.Errorf("failed connecting to database")
 	}
-	
-	if (len(userAuth.Email) <= 0 || !models.DoesEmailExist(database, userAuth.Email)) {
+	fmt.Println(userAuth.Email)
+	if len(userAuth.Email) <= 0 || !models.DoesEmailExist(database, userAuth.Email) {
 		c.Status(http.StatusBadRequest)
 		return fmt.Errorf("supplied email is invalid")
 	}
@@ -175,7 +174,7 @@ func CreateOTPRequest(c *fiber.Ctx) error {
 	return c.JSON(otp)
 }
 
-func ValidateOTPRequest(c* fiber.Ctx) error {
+func ValidateOTPRequest(c *fiber.Ctx) error {
 	var otp models.OTP
 
 	if err := c.BodyParser(&otp); err != nil {
@@ -184,7 +183,7 @@ func ValidateOTPRequest(c* fiber.Ctx) error {
 	}
 
 	database, err := db.Connect()
-	
+
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
 		return fmt.Errorf("failed connecting to database")
