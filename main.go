@@ -30,12 +30,18 @@ func main() {
 
 	database, err := db.Connect()
 
+
+
 	if err != nil {
 		fmt.Println("Error while connecting to db")
 		return
 	}
 
 	db.Migrate(database)
+	
 
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	router.Listen("0.0.0.0:8080")
 }

@@ -62,6 +62,9 @@ func RegisterUser(db *gorm.DB, user *models.User, userAuth *models.UserAuth) err
 	if result.Error != nil {
 		return fmt.Errorf("an unexpected error occurred")
 	}
+
+	
+
 	return nil
 }
 
