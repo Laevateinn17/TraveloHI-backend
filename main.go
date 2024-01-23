@@ -28,9 +28,12 @@ func main() {
 	router.Post("/otp", controllers.CreateOTPRequest)
 	router.Post("/check-otp", controllers.ValidateOTPRequest)
 
+	router.Post("/security-question", controllers.HandleGetSecurityQuestion)
+	router.Post("/security-answer", controllers.ValidateSecurityAnswer)
+
+	router.Post("/change-password", controllers.HandleChangePassword)
+
 	database, err := db.Connect()
-
-
 
 	if err != nil {
 		fmt.Println("Error while connecting to db")
@@ -38,7 +41,6 @@ func main() {
 	}
 
 	db.Migrate(database)
-	
 
 	if err != nil {
 		fmt.Println(err.Error())

@@ -43,6 +43,38 @@ func GetUserAuth(db *gorm.DB, userAuth *models.UserAuth) (*models.UserAuth, erro
 
 }
 
+func GetSecurityQuestion(db *gorm.DB, userAuth *models.UserAuth) (string, error) {
+	var result models.UserAuth
+	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
+
+	if result.ID == 0 {
+		return "", fmt.Errorf("authentication failed")
+	}
+
+	return result.SecurityQuestion, nil
+}
+
+func GetSecurityAnswer(db *gorm.DB, userAuth *models.UserAuth) (string, error) {
+	var result models.UserAuth
+	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
+
+	if result.ID == 0 {
+		return "", fmt.Errorf("authentication failed")
+	}
+
+	return result.SecurityAnswer, nil
+}
+
+func ChangePassword(db *gorm.DB, userAuth *models.UserAuth) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(userAuth.Password), bcrypt.DefaultCost)
+
+	if err != nil {
+		return fmt.Errorf("an unexpected error occurred")
+	}
+	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).Update("password", hash)
+	return nil
+}
+
 func RegisterUser(db *gorm.DB, user *models.User, userAuth *models.UserAuth) error {
 
 	if !models.ValidateData(user, userAuth) || models.DoesEmailExist(db, userAuth.Email) {
@@ -63,8 +95,5 @@ func RegisterUser(db *gorm.DB, user *models.User, userAuth *models.UserAuth) err
 		return fmt.Errorf("an unexpected error occurred")
 	}
 
-	
-
 	return nil
 }
-

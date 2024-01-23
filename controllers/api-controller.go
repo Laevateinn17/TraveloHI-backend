@@ -31,7 +31,7 @@ func HandleRegister(c *fiber.Ctx) error {
 		c.Status(http.StatusInternalServerError)
 		return c.JSON(fiber.Map{"error": err.Error()})
 	}
-	
+
 	err = SendEmail(&SMTP_SERVER, Email, []string{data.UserAuth.Email}, EmailPassword, "Account Registered Successfully", "Your account is registered successfully.\n")
 
 	if err != nil {
@@ -175,12 +175,12 @@ func CreateOTPRequest(c *fiber.Ctx) error {
 		return fmt.Errorf("failed sending otp code")
 	}
 
-	err = SendEmail(&SMTP_SERVER, Email, []string{userAuth.Email}, EmailPassword, "Your TraveloHI Verification Code", "Your verification code is <b>" + otp.Code + "</b>")
+	err = SendEmail(&SMTP_SERVER, Email, []string{userAuth.Email}, EmailPassword, "Your TraveloHI Verification Code", "Your verification code is <b>"+otp.Code+"</b>")
 
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
-	
+
 	c.Status(http.StatusOK)
 
 	return c.JSON(otp)
@@ -209,5 +209,86 @@ func ValidateOTPRequest(c *fiber.Ctx) error {
 	}
 
 	c.Status(http.StatusOK)
+	return nil
+}
+
+func HandleGetSecurityQuestion(c *fiber.Ctx) error {
+	var userAuth models.UserAuth
+
+	if err := c.BodyParser(&userAuth); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed connecting to database")
+	}
+
+	result, err := GetSecurityQuestion(database, &userAuth)
+
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf(err.Error())
+	}
+
+	c.JSON(fiber.Map{"securityQuestion": result})
+	return nil
+}
+
+func ValidateSecurityAnswer(c *fiber.Ctx) error {
+	var userAuth models.UserAuth
+
+	if err := c.BodyParser(&userAuth); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed connecting to database")
+	}
+
+	result, err := GetSecurityAnswer(database, &userAuth)
+
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf(err.Error())
+	}
+
+	if result != userAuth.SecurityAnswer {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf("wrong answer")
+	}
+
+	return nil
+}
+
+func HandleChangePassword(c *fiber.Ctx) error {
+	var userAuth models.UserAuth
+
+	if err := c.BodyParser(&userAuth); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed connecting to database")
+	}
+
+	err = ChangePassword(database, &userAuth)
+
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf(err.Error())
+	}
+
 	return nil
 }
