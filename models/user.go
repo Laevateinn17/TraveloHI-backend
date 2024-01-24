@@ -17,20 +17,20 @@ type User struct {
 	DateOfBirth       time.Time `json:"dateOfBirth"`
 	Gender            string    `json:"gender"`
 	ProfilePictureURL string    `json:"profilePictureURL"`
-	Role string `json:"role"`
-	IsSubscriber bool	 `json:"isSubscriber"`
+	Role              string    `json:"role"`
+	IsSubscriber      bool      `json:"isSubscriber"`
 
 	UserAuth UserAuth `json:"-" gorm:"foreignKey:UserID"`
 }
 
 type UserAuth struct {
 	gorm.Model
-	UserID           uint   `gorm:"foreignKey"`
+	UserID           uint
 	Email            string `json:"email"`
 	Password         string `json:"password"`
 	SecurityQuestion string `json:"securityQuestion"`
 	SecurityAnswer   string `json:"securityAnswer"`
-	IsBanned          bool      `json:"isBanned"`
+	IsBanned         bool   `json:"isBanned"`
 }
 
 func DoesEmailExist(db *gorm.DB, email string) bool {

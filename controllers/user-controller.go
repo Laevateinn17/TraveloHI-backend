@@ -34,7 +34,7 @@ func GetUser(db *gorm.DB, userAuth *models.UserAuth) (*models.User, error) {
 
 func GetUserAuthByEmail(db *gorm.DB, email string) (*models.UserAuth, error) {
 	var result models.UserAuth
-	db.Model(&models.UserAuth{}).Where("email = ?",email).First(&result)
+	db.Model(&models.UserAuth{}).Where("email = ?", email).First(&result)
 	if result.ID == 0 {
 		return nil, fmt.Errorf("authentication failed")
 	}
@@ -84,11 +84,19 @@ func GetSecurityAnswer(db *gorm.DB, userAuth *models.UserAuth) (string, error) {
 }
 
 func ChangePassword(db *gorm.DB, userAuth *models.UserAuth) error {
+	var result models.UserAuth
+	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
+
+	if err := bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(userAuth.Password)); err == nil {
+		return fmt.Errorf("new password is the same as old one")
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(userAuth.Password), bcrypt.DefaultCost)
 
 	if err != nil {
 		return fmt.Errorf("an unexpected error occurred")
 	}
+
 	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).Update("password", hash)
 	return nil
 }
