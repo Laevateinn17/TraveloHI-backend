@@ -16,8 +16,9 @@ type User struct {
 	LastName          string    `json:"lastName" gorm:"column:last_name"`
 	DateOfBirth       time.Time `json:"dateOfBirth"`
 	Gender            string    `json:"gender"`
-	IsBanned          bool      `json:"isBanned"`
 	ProfilePictureURL string    `json:"profilePictureURL"`
+	Role string `json:"role"`
+	IsSubscriber bool	 `json:"isSubscriber"`
 
 	UserAuth UserAuth `json:"-" gorm:"foreignKey:UserID"`
 }
@@ -29,11 +30,7 @@ type UserAuth struct {
 	Password         string `json:"password"`
 	SecurityQuestion string `json:"securityQuestion"`
 	SecurityAnswer   string `json:"securityAnswer"`
-}
-
-type Payload struct {
-	User     User     `json:"user"`
-	UserAuth UserAuth `json:"userAuth"`
+	IsBanned          bool      `json:"isBanned"`
 }
 
 func DoesEmailExist(db *gorm.DB, email string) bool {
@@ -42,7 +39,6 @@ func DoesEmailExist(db *gorm.DB, email string) bool {
 
 	return count > 0
 }
-
 func ValidateData(user *User, userAuth *UserAuth) bool {
 
 	if len(user.FirstName) <= 5 || utilities.HasNumber(user.FirstName) || utilities.HasSymbol(user.FirstName) {

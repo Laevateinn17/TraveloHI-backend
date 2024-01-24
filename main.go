@@ -21,6 +21,7 @@ func main() {
 	router.Get("/ping", controllers.Ping)
 	router.Post("/register", controllers.HandleRegister)
 	router.Post("/login", controllers.HandleLogin)
+	router.Post("/email-login", controllers.HandleLoginByEmail)
 
 	router.Get("/user", controllers.GetUserData)
 	router.Post("/logout", controllers.HandleLogout)

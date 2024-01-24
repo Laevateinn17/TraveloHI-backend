@@ -1,9 +1,14 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
+
+	// "strconv"
 	"time"
 
 	"github.com/Laevateinn17/travelohi-backend/db"
@@ -14,9 +19,50 @@ import (
 
 const secretKey = "vincent ganteng"
 
+const recaptchaSecretKey = "6LehlFopAAAAANZItAlnBGdpWPkBm634fN5wuOLr"
+
+
+func VerifyRecaptcha(responseToken string) (bool, error) {
+	// Prepare the request data
+	data := url.Values{}
+	data.Set("secret", recaptchaSecretKey)
+	data.Set("response", responseToken)
+
+	// Make a POST request to the reCAPTCHA verification endpoint
+	resp, err := http.PostForm("https://www.google.com/recaptcha/api/siteverify", data)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	// Parse the JSON response
+	var recaptchaResponse map[string]interface{}
+	if err := json.Unmarshal(body, &recaptchaResponse); err != nil {
+		return false, err
+	}
+
+	// Check if the verification was successful
+	success, ok := recaptchaResponse["success"].(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected response format")
+	}
+
+	return success, nil
+}
+
 func HandleRegister(c *fiber.Ctx) error {
 
-	var data models.Payload
+	var data struct{
+		User models.User `json:"user"`
+		UserAuth models.UserAuth `json:"userAuth"`
+		Captcha string `json:"captcha"`
+	}
 
 	if err := c.BodyParser(&data); err != nil {
 		fmt.Printf("Error binding JSON: %s\n", err)
@@ -24,18 +70,33 @@ func HandleRegister(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"error": "Invalid JSON"})
 	}
 
+	
+	success, err := VerifyRecaptcha(data.Captcha)
+
+	if err != nil || !success {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 	database, _ := db.Connect()
-	err := RegisterUser(database, &data.User, &data.UserAuth)
+	err = RegisterUser(database, &data.User, &data.UserAuth)
 
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
-		return c.JSON(fiber.Map{"error": err.Error()})
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	err = SendEmail(&SMTP_SERVER, Email, []string{data.UserAuth.Email}, EmailPassword, "Account Registered Successfully", "Your account is registered successfully.\n")
 
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 	return nil
 }
@@ -46,30 +107,48 @@ func Ping(c *fiber.Ctx) error {
 }
 
 func HandleLogin(c *fiber.Ctx) error {
-	var userAuth models.UserAuth
-	if err := c.BodyParser(&userAuth); err != nil {
-		fmt.Println("Error binding json")
+	var data struct {
+	 UserAuth *models.UserAuth `json:"userAuth"`
+	 Captcha string	 `json:"captcha"`
+	}
+
+	if err := c.BodyParser(&data); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+
+	success, err := VerifyRecaptcha(data.Captcha)
+
+	if err != nil || !success {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	database, _ := db.Connect()
-	user, err := GetUserAuth(database, &userAuth)
-	if err != nil {
+	userAuth, err := GetUserAuth(database, data.UserAuth)
+	if err != nil{
+		fmt.Println(1)
 		c.Status(http.StatusBadRequest)
-		return c.JSON(err.Error())
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	expiryTime := time.Now().Add(time.Hour * 24)
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    strconv.Itoa(int(user.ID)),
+		Issuer:    strconv.Itoa(int(userAuth.ID)),
 		ExpiresAt: jwt.NewNumericDate(expiryTime),
 	})
 
 	token, err := claims.SignedString([]byte(secretKey))
 
 	if err != nil {
+	fmt.Println(3)
 		c.Status(http.StatusInternalServerError)
-		c.JSON(fiber.Map{
+		return c.JSON(fiber.Map{
 			"error": "could not login",
 		})
 	}
@@ -89,10 +168,74 @@ func HandleLogin(c *fiber.Ctx) error {
 	}
 
 	c.Cookie(&cookie2)
-
+	c.Status(http.StatusOK)
 	return c.JSON(fiber.Map{
 		"messsage": "success",
 	})
+}
+
+func HandleLoginByEmail(c* fiber.Ctx) error {
+	var userAuth *models.UserAuth
+
+	if err := c.BodyParser(&userAuth); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	userAuth, err = GetUserAuthByEmail(database, userAuth.Email)
+
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		
+		return c.JSON(fiber.Map{
+		"error" : err.Error()})
+	}
+
+	expiryTime := time.Now().Add(time.Hour * 24)
+
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Issuer:    strconv.Itoa(int(userAuth.ID)),
+		ExpiresAt: jwt.NewNumericDate(expiryTime),
+	})
+
+	token, err := claims.SignedString([]byte(secretKey))
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"error": "could not login",
+		})
+	}
+	cookie := fiber.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  expiryTime,
+		HTTPOnly: true,
+	}
+
+	c.Cookie(&cookie)
+
+	cookie2 := fiber.Cookie{
+		Name:    "session",
+		Value:   "active",
+		Expires: expiryTime,
+	}
+
+	c.Cookie(&cookie2)
+	c.Status(http.StatusOK)
+	return c.JSON(fiber.Map{
+		"messsage": "success",
+	})
+
 }
 
 func GetUserData(c *fiber.Ctx) error {
@@ -153,31 +296,34 @@ func CreateOTPRequest(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&userAuth); err != nil {
 		c.Status(http.StatusInternalServerError)
-		return fmt.Errorf("error binding json")
+		return c.JSON(fiber.Map{
+			"error": "could not login",
+		})
 	}
 
 	database, err := db.Connect()
 
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
-		return fmt.Errorf("failed connecting to database")
+		return c.JSON(fiber.Map{"error": err.Error()})
 	}
-	fmt.Println(userAuth.Email)
+
 	if len(userAuth.Email) <= 0 || !models.DoesEmailExist(database, userAuth.Email) {
 		c.Status(http.StatusBadRequest)
-		return fmt.Errorf("supplied email is invalid")
+		return c.JSON(fiber.Map{"error": "invalid email"})
 	}
 
 	otp, err := CreateOTP(database, &userAuth)
 
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
-		return fmt.Errorf("failed sending otp code")
+		return c.JSON(fiber.Map{"error": err.Error()})
 	}
 
 	err = SendEmail(&SMTP_SERVER, Email, []string{userAuth.Email}, EmailPassword, "Your TraveloHI Verification Code", "Your verification code is <b>"+otp.Code+"</b>")
 
 	if err != nil {
+		c.Status(http.StatusInternalServerError)
 		return fmt.Errorf(err.Error())
 	}
 
@@ -205,7 +351,7 @@ func ValidateOTPRequest(c *fiber.Ctx) error {
 
 	if err != nil {
 		c.Status(http.StatusBadRequest)
-		return c.JSON(err.Error())
+		return fmt.Errorf(err.Error())
 	}
 
 	c.Status(http.StatusOK)
@@ -273,21 +419,21 @@ func HandleChangePassword(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&userAuth); err != nil {
 		c.Status(http.StatusInternalServerError)
-		return fmt.Errorf("error binding json")
+		return c.JSON(fiber.Map{"error": "Invalid JSON"})
 	}
 
 	database, err := db.Connect()
 
 	if err != nil {
 		c.Status(http.StatusInternalServerError)
-		return fmt.Errorf("failed connecting to database")
+		return c.JSON(fiber.Map{"error": err.Error()})
 	}
 
 	err = ChangePassword(database, &userAuth)
 
 	if err != nil {
 		c.Status(http.StatusBadRequest)
-		return fmt.Errorf(err.Error())
+		return c.JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return nil
