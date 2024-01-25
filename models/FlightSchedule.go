@@ -17,8 +17,13 @@ type FlightSchedule struct {
 	AirplaneID           uint      `json:"-"`
 	FlightTicketID       uint      `json:"-"`
 
-	// DepartureAirport   Airport     `json:"departureAirport"`
-	// DestinationAirport Airport     `json:"destinationAirport"`
-	// Airplane Airplane `json:"airplane"`
-	// Passengers         []Passenger `json:"passengers" gorm:"foreignKey:FlightScheduleID"`
+	//services
+
+	FoodService   bool   `json:"foodService"`
+	
+
+	DepartureAirport   Airport     `json:"departureAirport"`
+	DestinationAirport Airport     `json:"destinationAirport"`
+	Airplane Airplane `json:"airplane"`
+	Passengers         []Passenger `json:"passengers" gorm:"foreignKey:FlightScheduleID"`
 }

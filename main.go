@@ -5,6 +5,7 @@ import (
 
 	"github.com/Laevateinn17/travelohi-backend/controllers"
 	"github.com/Laevateinn17/travelohi-backend/db"
+	"github.com/Laevateinn17/travelohi-backend/seed"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq"
@@ -43,8 +44,8 @@ func main() {
 
 	db.Migrate(database)
 
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	seed.Seed(database)
+
+	
 	router.Listen("0.0.0.0:8080")
 }
