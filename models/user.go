@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"regexp"
 	"time"
 
@@ -41,25 +40,25 @@ func DoesEmailExist(db *gorm.DB, email string) bool {
 }
 func ValidateData(user *User, userAuth *UserAuth) bool {
 
-	if len(user.FirstName) <= 5 || utilities.HasNumber(user.FirstName) || utilities.HasSymbol(user.FirstName) {
-		fmt.Println("1")
+	if len(user.FirstName) < 5 || utilities.HasNumber(user.FirstName) || utilities.HasSymbol(user.FirstName) {
+		return false
+	}
+
+	if len(user.LastName) < 5 || utilities.HasNumber(user.LastName) || utilities.HasSymbol(user.LastName) {
 		return false
 	}
 
 	if time.Now().Year()-user.DateOfBirth.Year() < 13 {
-		fmt.Println("2")
 		return false
 	}
 
 	if user.Gender != "M" && user.Gender != "F" {
-		fmt.Println("3")
 		return false
 	}
 
 	re := regexp.MustCompile(`^[a-zA-Z0-9!@#$%^&*()_+{}\\[\\]:;<>,.?~\\\\/-]+$`)
 
 	if re.MatchString(userAuth.Password) || len(userAuth.Password) < 8 || len(userAuth.Password) > 30 {
-		fmt.Println("4")
 		return false
 	}
 
