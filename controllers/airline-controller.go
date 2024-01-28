@@ -11,6 +11,5 @@ func GetAirlines(db *gorm.DB) ([]*models.Airline, error) {
 		return nil, err
 	}
 
-
 	return result, nil
 }

@@ -12,7 +12,7 @@ func Seed(db *gorm.DB) {
 	if err := seedAirport(db); err != nil {
 		fmt.Println(err.Error())
 	}
-	
+
 	if err := seedAirline(db); err != nil {
 		fmt.Println(err.Error())
 	}
@@ -22,7 +22,7 @@ func Seed(db *gorm.DB) {
 	}
 }
 
-func seedAirport(db* gorm.DB) error {
+func seedAirport(db *gorm.DB) error {
 	if err := db.Migrator().DropTable(&models.Airport{}); err != nil {
 		fmt.Printf("Error dropping Airport table: %v\n", err)
 		return err
@@ -32,21 +32,56 @@ func seedAirport(db* gorm.DB) error {
 		fmt.Printf("Error creating Airport table: %v\n", err)
 		return err
 	}
-	airports  := []models.Airport{
+	airports := []models.Airport{
 		{
-			Name: "Mohamed Boudiaf International Airport",
-			Code: "CZL",
-			City: "Constantine",
+			Name:    "Mohamed Boudiaf International Airport",
+			Code:    "CZL",
+			City:    "Constantine",
 			Country: "Algeria",
 		},
 		{
-			Name: "Chlef International Airport",
-			Code: "CFK",
-			City: "Chlef",
+			Name:    "Chlef International Airport",
+			Code:    "CFK",
+			City:    "Chlef",
 			Country: "Algeria",
+		},
+		{
+			Name:    "Halim Perdanakusuma International Airport",
+			Code:    "HLP",
+			City:    "Jakarta",
+			Country: "Indonesia",
+		},
+		{
+			Name:    "Soekarno–Hatta International Airport",
+			Code:    "CGK",
+			City:    "Jakarta",
+			Country: "Indonesia",
+		},
+		{
+			Name:    "Hang Nadim International Airport",
+			Code:    "BTH",
+			City:    "Batam",
+			Country: "Indonesia",
+		},
+		{
+			Name:    "Kualanamu International Airport",
+			Code:    "KNO",
+			City:    "Medan",
+			Country: "Indonesia",
+		},
+		{
+			Name:    "Sultan Syarif Kasim II International Airport",
+			Code:    "PKU",
+			City:    "Pekanbaru",
+			Country: "Indonesia",
+		},
+		{
+			Name:    "Husein Sastranegara International Airport",
+			Code:    "BDO",
+			City:    "Bandung",
+			Country: "Indonesia",
 		},
 	}
-
 
 	for _, airport := range airports {
 		if err := db.Create(&airport).Error; err != nil {
@@ -55,11 +90,11 @@ func seedAirport(db* gorm.DB) error {
 			// return fmt.Errorf("error seeding airport %s", airport.Name)
 		}
 	}
-	
+
 	return nil
 }
 
-func seedAirline(db* gorm.DB) error {
+func seedAirline(db *gorm.DB) error {
 	if err := db.Migrator().DropTable(&models.Airline{}); err != nil {
 		fmt.Printf("Error dropping Airport table: %v\n", err)
 		return err
@@ -86,6 +121,9 @@ func seedAirline(db* gorm.DB) error {
 		{
 			Name: "Super Air Jet",
 		},
+		{
+			Name: "Lion Air",
+		},
 	}
 
 	for _, airline := range airlines {
@@ -94,13 +132,23 @@ func seedAirline(db* gorm.DB) error {
 			return err
 		}
 	}
-	
+
 	return nil
 
 }
 
 func seedAirplane(db *gorm.DB) error {
 	airlines, err := controllers.GetAirlines(db)
+
+	if err := db.Migrator().DropTable(&models.Airplane{}); err != nil {
+		fmt.Printf("Error dropping Airport table: %v\n", err)
+		return err
+	}
+
+	if err := db.AutoMigrate(&models.Airplane{}); err != nil {
+		fmt.Printf("Error creating Airport table: %v\n", err)
+		return err
+	}
 
 	if err != nil {
 		return fmt.Errorf("error retrieving airlines")
@@ -109,29 +157,30 @@ func seedAirplane(db *gorm.DB) error {
 	airplanes := []models.Airplane{
 		{
 			AirplaneModel: "A320",
-			Manufacturer: "Airbus",
-			Capacity: 168,
-			SeatConfig: models.THREE_THREE_SEAT_LAYOUT,
+			Manufacturer:  "Airbus",
+			Capacity:      168,
+			SeatConfig:    models.THREE_THREE_SEAT_LAYOUT,
 			Entertainment: true,
-			WiFi: true,
-			PowerOutlets: true,
-			Airline: *airlines[0],
+			WiFi:          true,
+			PowerOutlets:  true,
 		},
 		{
-			AirplaneModel: "A320",
-			Manufacturer: "Airbus",
-			Capacity: 168,
-			SeatConfig: models.THREE_THREE_SEAT_LAYOUT,
-			Entertainment: true,
-			WiFi: true,
-			PowerOutlets: true,
-			Airline: *airlines[1],
+			AirplaneModel: "737",
+			Manufacturer:  "Boeing",
+			Capacity:      162,
+			SeatConfig:    models.THREE_THREE_SEAT_LAYOUT,
+			Entertainment: false,
+			WiFi:          false,
+			PowerOutlets:  true,
 		},
 	}
-	
-	for _, airplane := range airplanes {
-		if err := db.Create(&airplane).Error; err != nil {
-			return err
+
+	for _, airline := range airlines {
+		for _, airplane := range airplanes {
+			airplane.Airline = *airline
+			if err := db.Create(&airplane).Error; err != nil {
+				return err
+			}
 		}
 	}
 

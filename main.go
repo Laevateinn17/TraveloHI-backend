@@ -35,6 +35,16 @@ func main() {
 
 	router.Post("/change-password", controllers.HandleChangePassword)
 
+	router.Get("/airports-data", controllers.HandleGetAirportsData)
+
+	router.Get("/airlines-data", controllers.HandleGetAirlinesData)
+
+	router.Get("/airplanes-data", controllers.HandleGetAirplanesData)
+
+	router.Post("/add-flight", controllers.HandleAddFlightSchedule)
+
+	router.Post("/available-planes", controllers.HandleGetAvailableAirplanes)
+
 	database, err := db.Connect()
 
 	if err != nil {
@@ -46,6 +56,5 @@ func main() {
 
 	seed.Seed(database)
 
-	
 	router.Listen("0.0.0.0:8080")
 }

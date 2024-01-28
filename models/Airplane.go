@@ -8,8 +8,8 @@ const (
 
 type Airplane struct {
 	gorm.Model
-	AirplaneModel string `json:"model"`
-	Manufacturer string `json:"manufacturer"`
+	AirplaneModel string `json:"airplaneModel"`
+	Manufacturer  string `json:"manufacturer"`
 	Capacity      int    `json:"capacity"`
 	SeatConfig    string `json:"seatConfig"`
 	Entertainment bool   `json:"entertainment"`

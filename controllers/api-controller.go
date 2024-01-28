@@ -21,7 +21,6 @@ const secretKey = "vincent ganteng"
 
 const recaptchaSecretKey = "6LehlFopAAAAANZItAlnBGdpWPkBm634fN5wuOLr"
 
-
 func VerifyRecaptcha(responseToken string) (bool, error) {
 	// Prepare the request data
 	data := url.Values{}
@@ -58,10 +57,10 @@ func VerifyRecaptcha(responseToken string) (bool, error) {
 
 func HandleRegister(c *fiber.Ctx) error {
 
-	var data struct{
-		User models.User `json:"user"`
+	var data struct {
+		User     models.User     `json:"user"`
 		UserAuth models.UserAuth `json:"userAuth"`
-		Captcha string `json:"captcha"`
+		Captcha  string          `json:"captcha"`
 	}
 
 	if err := c.BodyParser(&data); err != nil {
@@ -70,7 +69,6 @@ func HandleRegister(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"error": "Invalid JSON"})
 	}
 
-	
 	success, err := VerifyRecaptcha(data.Captcha)
 
 	if err != nil || !success {
@@ -108,8 +106,8 @@ func Ping(c *fiber.Ctx) error {
 
 func HandleLogin(c *fiber.Ctx) error {
 	var data struct {
-	 UserAuth *models.UserAuth `json:"userAuth"`
-	 Captcha string	 `json:"captcha"`
+		UserAuth *models.UserAuth `json:"userAuth"`
+		Captcha  string           `json:"captcha"`
 	}
 
 	if err := c.BodyParser(&data); err != nil {
@@ -128,7 +126,7 @@ func HandleLogin(c *fiber.Ctx) error {
 
 	database, _ := db.Connect()
 	userAuth, err := GetUserAuth(database, data.UserAuth)
-	if err != nil{
+	if err != nil {
 		fmt.Println(1)
 		c.Status(http.StatusBadRequest)
 		return c.JSON(fiber.Map{
@@ -146,7 +144,7 @@ func HandleLogin(c *fiber.Ctx) error {
 	token, err := claims.SignedString([]byte(secretKey))
 
 	if err != nil {
-	fmt.Println(3)
+		fmt.Println(3)
 		c.Status(http.StatusInternalServerError)
 		return c.JSON(fiber.Map{
 			"error": "could not login",
@@ -174,7 +172,7 @@ func HandleLogin(c *fiber.Ctx) error {
 	})
 }
 
-func HandleLoginByEmail(c* fiber.Ctx) error {
+func HandleLoginByEmail(c *fiber.Ctx) error {
 	var userAuth *models.UserAuth
 
 	if err := c.BodyParser(&userAuth); err != nil {
@@ -195,9 +193,9 @@ func HandleLoginByEmail(c* fiber.Ctx) error {
 
 	if err != nil {
 		c.Status(http.StatusBadRequest)
-		
+
 		return c.JSON(fiber.Map{
-		"error" : err.Error()})
+			"error": err.Error()})
 	}
 
 	expiryTime := time.Now().Add(time.Hour * 24)
@@ -434,6 +432,160 @@ func HandleChangePassword(c *fiber.Ctx) error {
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return c.JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return nil
+}
+
+func HandleGetAirportsData(c *fiber.Ctx) error {
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	airports, err := GetAirports(database)
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"airports": airports,
+	})
+}
+
+func HandleGetAirlinesData(c *fiber.Ctx) error {
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	airports, err := GetAirlines(database)
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"airlines": airports,
+	})
+}
+
+func HandleGetAirplanesData(c *fiber.Ctx) error {
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	airports, err := GetAirplanes(database)
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"airplanes": airports,
+	})
+}
+
+func HandleAddFlightSchedule(c *fiber.Ctx) error {
+	var flightSchedule models.FlightSchedule
+
+	if err := c.BodyParser(&flightSchedule); err != nil {
+		c.Status(http.StatusInternalServerError)
+		fmt.Println(err.Error())
+		return fmt.Errorf("error binding json")
+	}
+	// flightSchedule := string(c.BodyRaw())
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	isAvailable, err := IsAirplaneAvailable(database, flightSchedule.Airplane.ID, flightSchedule.DepartureTime, flightSchedule.ArrivalTime)
+
+	if !isAvailable {
+		c.Status(http.StatusBadRequest)
+		return fmt.Errorf("airplane is not available within the time period")
+	}
+
+	if err = AddFlightSchedule(database, &flightSchedule); err != nil {
+		c.Status(http.StatusBadRequest)
+		return err
+	}
+
+	return nil
+}
+
+func HandleGetAvailableAirplanes(c *fiber.Ctx) error {
+	var data struct {
+		Airline       models.Airline `json:"airline"`
+		DepartureTime time.Time      `json:"departureTime"`
+		ArrivalTime   time.Time      `json:"arrivalTime"`
+	}
+
+	if err := c.BodyParser(&data); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	fmt.Println(data)
+
+	database, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
+	}
+
+	airplanes, err := GetAirplanes(database)
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("failed retrieving airplanes data")
+	}
+
+	var ret []models.Airplane
+
+	for _, airplane := range airplanes {
+		if avail, _ := IsAirplaneAvailable(database, airplane.ID, data.DepartureTime, data.ArrivalTime); avail && airplane.Airline.ID == data.Airline.ID {
+			ret = append(ret, *airplane)
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"airplanes": ret,
+	})
+}
+
+func HandleAPI(c *fiber.Ctx) error {
+	var object string
+
+	if err := c.BodyParser(&object); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return fmt.Errorf("error binding json")
+	}
+
+	_, err := db.Connect()
+
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return err
 	}
 
 	return nil

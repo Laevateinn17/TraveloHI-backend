@@ -12,7 +12,6 @@ func GetUser(db *gorm.DB, userAuth *models.UserAuth) (*models.User, error) {
 
 	var result models.UserAuth
 	db.Model(&models.UserAuth{}).Where("email = ?", userAuth.Email).First(&result)
-	fmt.Println(1)
 	if result.ID == 0 {
 		return nil, fmt.Errorf("authentication failed")
 	}
